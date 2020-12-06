@@ -1,5 +1,7 @@
 #include "fractal_flames.h"
-#include <CL/cl.h>
+#include "clut.h"
+#include "fractal.h"
+#include "CL/cl.h"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -29,7 +31,7 @@ char* getKernelFromFile(const char* filename, const char* preamble, size_t *sz) 
 	return sourceString;
 }
 
-tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(tuple<int, int, int> _dimensions, vector<float> _weights) {
+tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, tuple<int, int, int> _dimensions, vector<float> _weights) {
 
 	//Set up prelim variables
 	cl_platform_id platform_id;
@@ -53,9 +55,13 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(tuple<int, int, int>
 	cl_float *dimensions, *weights;
 	cl_float *vertices, *colors;
 	cl_uint vertTotal = std::get<0>(_dimensions) * std::get<1>(_dimensions) * std::get<2>(_dimensions);
+	cl_uint iterations = _iterations;
+	Clut inClut;
+	inClut.initColors();
+	Fractal inFrac;
 	#define DATA_SIZE vertTotal * 3
 
-	dimensions = (cl_int *) malloc(sizeof(cl_int) * 3);
+	dimensions = (cl_uint *) malloc(sizeof(cl_uint) * 3);
 	weights = (cl_float *) malloc(sizeof(cl_float) * 4);
 	vertices = (cl_float *) malloc(sizeof(cl_float) * DATA_SIZE);
 	colors = (cl_float *) malloc(sizeof(cl_float) * DATA_SIZE);
@@ -116,20 +122,23 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(tuple<int, int, int>
 	kernel = clCreateKernel(program, "flame", &err);
 
 	//Set up data buffers
-	input1 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_int) * 3, NULL, NULL);
+	input1 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_uint) * 3, NULL, NULL);
 	input2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 3, NULL, NULL);
 	output1 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * DATA_SIZE, NULL, NULL);
 	output2 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * DATA_SIZE, NULL, NULL);
 
 	//Load data into input
-	clEnqueueWriteBuffer(command_queue, input1, CL_TRUE, 0, sizeof(cl_int) * 3, dimensions, 0, NULL, NULL);
+	clEnqueueWriteBuffer(command_queue, input1, CL_TRUE, 0, sizeof(cl_uint) * 3, dimensions, 0, NULL, NULL);
 	clEnqueueWriteBuffer(command_queue, input2, CL_TRUE, 0, sizeof(cl_float) * 3, weights, 0, NULL, NULL);
 
 	//Set arguments for kernel
-	clSetKernelArg(kernel, 0, sizeof(cl_mem), &input1);
-	clSetKernelArg(kernel, 1, sizeof(cl_mem), &input2);
-	clSetKernelArg(kernel, 2, sizeof(cl_mem), &output1);
-	clSetKernelArg(kernel, 3, sizeof(cl_mem), &output2);
+	clSetKernelArg(kernel, 0, sizeof(int), &iterations);
+	clSetKernelArg(kernel, 1, sizeof(cl_mem), &input1);
+	clSetKernelArg(kernel, 2, sizeof(cl_mem), &input2);
+	clSetKernelArg(kernel, 3, sizeof(cl_mem), &output1);
+	clSetKernelArg(kernel, 4, sizeof(cl_mem), &output2);
+	clSetKernelArg(kernel, 5, sizeof(Clut), &inClut);
+	clSetKernelArg(kernel, 6, sizeof(Fractal), &inFrac);
 
 	//Configure local/global data into chunks
 	global[0] = std::get<0>(_dimensions);
