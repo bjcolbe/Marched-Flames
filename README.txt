@@ -12,4 +12,4 @@ Command Usage:
 	-weights [float] [float] [float] [float]		Weights for fractal functions
 	-r [float]										Resolution of the model
 
-Generation times for the object may take an order of minutes.
+Depending on the complexity of the model dictated by iterations and resolution, computation time can be on the order of seconds to minutes.

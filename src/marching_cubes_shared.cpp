@@ -110,10 +110,11 @@ MarchingCubes::Space::Space(float resolution, Model &model) {
 	height = (int)ceil((maxY - minY) * step);
 	length = (int)ceil((maxZ - minZ) * step);
 
-	printf("Bounds: (%.3f, %.3f) (%.3f, %.3f) (%.3f, %.3f)\n", minX, maxX, minY, maxY, minZ, maxZ);
-	printf("Size: %f, %f, %f\n", maxX - minX, maxY - minY, maxZ - minZ);
-	printf("Average Distance: %f\n", averageDistance);
-	printf("Dimensions: %i, %i, %i\n", width, height, length);
+	printf("Space\n");
+	printf("\tBounds: (%.2f, %.2f) (%.2f, %.2f) (%.2f, %.2f)\n", minX, maxX, minY, maxY, minZ, maxZ);
+	printf("\tSize: %f, %f, %f\n", maxX - minX, maxY - minY, maxZ - minZ);
+	printf("\tAverage Distance: %f\n", averageDistance);
+	printf("\tDimensions: %i, %i, %i\n", width, height, length);
 
 	for(auto j = 0; j < height; j++)
 	for(auto k = 0; k < length; k++)

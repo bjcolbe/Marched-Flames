@@ -3,6 +3,7 @@
 #include <cmath>
 #include <limits>
 #include <vector>
+#include <chrono>
 
 using namespace std;
 using Point = MarchingCubes::Point;
@@ -65,8 +66,18 @@ void MarchingCubes::march(float resolution, Model &model) {
 	model.vertices.clear();
 	model.colors.clear();
 
+	int count = 0;
+	float totalMarchTime = 0;
+
 	space.forEach([&](Cell cell) {
+		auto start = chrono::high_resolution_clock::now();
 		auto faces = polygonize(cell);
+
+		auto end = chrono::high_resolution_clock::now();
+		auto delta = chrono::duration<float, std::milli>(end - start).count();
+		totalMarchTime += delta;
+		count++;
+
 		auto n = model.vertices.size();
 
 		for(auto face : faces)
@@ -82,4 +93,8 @@ void MarchingCubes::march(float resolution, Model &model) {
 				n + 1 + i * 3 + 2
 			});
 	});
+
+	printf("Time\n");
+	printf("\tAverage Cell: %fs\n", totalMarchTime / count / 1000);
+	printf("\tTotal March: %fs\n", totalMarchTime / 1000);
 }

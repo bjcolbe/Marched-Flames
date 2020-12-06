@@ -39,12 +39,12 @@ int main(int argc, char **argv) {
 		}
 
 	} catch (std::exception &e) {
-		cout << "Caught Exception: " << e.what() << endl;\
+		cout << "Caught Exception: " << e.what() << endl;
 		cout << "Command Usage:\n-o [file]						Defines path to output to\n"
 			<< "-i [int]										Defines the number of iterations to run\n"
 			<< "-r [int]										Defines the model resolution\n"
 			<< "-dim [int] [int] [int]							Defines xyz dimensions of fractal model\n"
-			<< "-weights [float] [float] [float] [float]		Defines weights for fractal functions" << endl;
+			<< "-weights [float] [float] [float] [float]		Defines weights in the range [0, 1] for fractal functions" << endl;
 		exit(0);
 	}
 
@@ -53,11 +53,11 @@ int main(int argc, char **argv) {
 	model.vertices = get<0>(points);
 	model.colors = get<1>(points);
 
-	printf("Generated %zu fractal vertices\n", model.vertices.size());
+	printf("Fractal\n\tVertices: %zu\n\tColors: %zu\n", model.vertices.size(), model.colors.size());
 
 	MarchingCubes::marchCL(res, model);
 
-	printf("Marched %zu faces and %zu vertices\n", model.faces.size(), model.vertices.size());
+	printf("March\n\tVertices: %zu\n\tVertices: %zu\n", model.faces.size(), model.vertices.size());
 
 	model.scale(20);
 	model.write(path);
