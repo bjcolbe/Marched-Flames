@@ -2,7 +2,7 @@ name := marched_fractals
 username := 
 hostname := access.computing.clemson.edu
 
-include_dir := include
+include_dir := include opencl/include
 src_dir := src
 obj_dir := out
 
@@ -10,6 +10,7 @@ share_dir := /home/$(username)/Desktop
 contents := $(include_dir) $(src_dir) Makefile
 
 libs := m OpenCL
+lib_dirs := opencl/lib/x86
 
 dir := $(shell basename "$(CURDIR)")
 src := $(wildcard $(src_dir)/*.cpp)
@@ -17,6 +18,7 @@ objs := $(src:$(src_dir)/%.cpp=$(obj_dir)/%.o)
 
 CXXFLAGS += -std=c++14 -Wall
 CXXFLAGS += $(foreach dir,$(include_dir),-I$(dir))
+LDFLAGS += $(foreach dir,$(lib_dirs),-L$(dir))
 LDFLAGS += $(foreach lib,$(libs),-l$(lib))
 
 all: $(obj_dir) $(name)
