@@ -48,15 +48,17 @@ int main(int argc, char **argv) {
 		exit(0);
 	}
 
-	auto points = FractalFlames::cpufractal(iterations, dimensions, weights);
-	cout << "Frac done" << endl;
-	auto vertices = get<0>(points);
-	auto colors = get<1>(points);
-	cout << "Frac really done" << endl;
-
 	Model model;
-	model.vertices = vertices;
-	model.colors = colors;
+	auto points = FractalFlames::cpufractal(iterations, dimensions, weights);
+	model.vertices = get<0>(points);
+	model.colors = get<1>(points);
+
+	printf("Generated %zu fractal vertices\n", model.vertices.size());
+
 	MarchingCubes::march(res, model);
+
+	printf("Marched %zu faces and %zu vertices\n", model.faces.size(), model.vertices.size());
+
+	model.scale(20);
 	model.write(path);
 }
