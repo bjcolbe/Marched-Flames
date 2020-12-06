@@ -1,18 +1,18 @@
 #include "marching_cubes.h"
 
+#include <cstdio>
 #include <ios>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <cmath>
 #include <limits>
+#include <iostream>
 
 using namespace std;
 using Space = MarchingCubes::Space;
 using Point = MarchingCubes::Point;
 using Cell = MarchingCubes::Cell;
-
-// #define DEBUG_MODE
 
 int MarchingCubes::EdgeTable[TableSize];
 int MarchingCubes::TriangleTable[TableSize][SubTableSize];
@@ -53,6 +53,14 @@ MarchingCubes::Initializer::Initializer() {
 }
 
 MarchingCubes::Space::Space(float resolution, Model &model) {
+	if(model.vertices.size() != model.colors.size()) {
+		cerr << "Model vertices " << model.colors.size() << " are not the same amount as vertex colors " << model.colors.size() << endl;
+		return;
+	}
+
+	if(model.vertices.size() == 0)
+		return;
+
 	constexpr auto inf = numeric_limits<float>::infinity();
 	minX = minY = minZ = inf;
 	maxX = maxY = maxZ = -inf;
@@ -92,10 +100,20 @@ MarchingCubes::Space::Space(float resolution, Model &model) {
 
 	averageDistance /= model.vertices.size();
 
+	if(averageDistance == 0) {
+		cerr << "Average distance between points is zero" << endl;
+		return;
+	}
+
 	auto step = resolution / averageDistance;
 	width = (int)ceil((maxX - minX) * step);
 	height = (int)ceil((maxY - minY) * step);
 	length = (int)ceil((maxZ - minZ) * step);
+
+	printf("Bounds: (%.3f, %.3f) (%.3f, %.3f) (%.3f, %.3f)\n", minX, maxX, minY, maxY, minZ, maxZ);
+	printf("Size: %f, %f, %f\n", maxX - minX, maxY - minY, maxZ - minZ);
+	printf("Average Distance: %f\n", averageDistance);
+	printf("Dimensions: %i, %i, %i\n", width, height, length);
 
 	for(auto j = 0; j < height; j++)
 	for(auto k = 0; k < length; k++)
@@ -114,14 +132,6 @@ MarchingCubes::Space::Space(float resolution, Model &model) {
 
 		colors[width * (length * j + k) + i] = c;
 	}
-
-	#ifdef DEBUG_MODE
-		printf("\n");
-		printf("Bounds: (%.3f, %.3f) (%.3f, %.3f) (%.3f, %.3f)\n", minX, maxX, minY, maxY, minZ, maxZ);
-		printf("Size: %f, %f, %f\n", maxX - minX, maxY - minY, maxZ - minZ);
-		printf("Average Distance: %f\n", distance);
-		printf("Dimensions: %i, %i, %i\n", width, height, length);
-	#endif
 }
 
 Point Space::at(int i, int j, int k) {
