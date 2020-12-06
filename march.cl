@@ -28,8 +28,8 @@ kernel void polygonize(
 		float r1 = colors[j * 3], g1 = colors[j * 3 + 1], b1 = colors[j * 3 + 2];
 		float r2 = colors[k * 3], g2 = colors[k * 3 + 1], b2 = colors[k * 3 + 2];
 
-		bool active1 = r1 > 0 || g1 > 0 || b1 > 0;
-		bool active2 = r2 > 0 || g2 > 0 || b2 > 0;
+		bool active1 = r1 >= 0 || g1 >= 0 || b1 >= 0;
+		bool active2 = r2 >= 0 || g2 >= 0 || b2 >= 0;
 
 		float v1 = active1 ? 0.0f : 1.0f;
 		float v2 = active2 ? 0.0f : 1.0f;

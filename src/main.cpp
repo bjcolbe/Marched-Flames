@@ -2,6 +2,7 @@
 #include <tuple>
 #include <string>
 #include <iostream>
+#include <cmath>
 #include "types/model.h"
 #include "marching_cubes.h"
 #include "fractal_flames.h"
@@ -9,7 +10,6 @@
 using namespace std;
 
 int main(int argc, char **argv) {
-
 	vector<int> dimensions = {100, 100, 100}; //read from args
 	vector<float> weights{1.1, 1.2, 1.3, 1.4}; //read from args
 	string path = "model"; //read from args
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 
 	printf("Generated %zu fractal vertices\n", model.vertices.size());
 
-	MarchingCubes::march(res, model);
+	MarchingCubes::marchCL(res, model);
 
 	printf("Marched %zu faces and %zu vertices\n", model.faces.size(), model.vertices.size());
 

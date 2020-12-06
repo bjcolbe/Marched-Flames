@@ -119,7 +119,7 @@ MarchingCubes::Space::Space(float resolution, Model &model) {
 	for(auto k = 0; k < length; k++)
 	for(auto i = 0; i < width; i++) {
 		vertices.push_back({(float)i, (float)j, (float)k});
-		colors.push_back(Color::Black);
+		colors.push_back({-1, -1, -1});
 	}
 
 	for(auto index = (int)model.vertices.size() - 1; index >= 0; index--) {
@@ -169,5 +169,5 @@ void Space::forEach(function<void(Cell)> action) {
 
 bool Space::isActive(Point point) {
 	auto color = get<1>(point);
-	return color.r > 0 || color.g > 0 || color.b > 0;
+	return color.r >= 0 || color.g >= 0 || color.b >= 0;
 }
