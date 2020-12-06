@@ -40,7 +40,7 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::cpufractal(int _iterations, 
 	int iterations = _iterations;
 
 	Vertex V(0,0,0);
-	Color C(0,0,0);
+	Color C(1,1,1);
 	V.x = 2.0 * drand48() - 1.0;
 	V.y = 2.0 * drand48() - 1.0;
 	V.z = 2.0 * drand48() - 1.0;
