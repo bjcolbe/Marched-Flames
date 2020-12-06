@@ -33,8 +33,8 @@ void Clut::initColors() {
 	colors.push_back(color);
 }
 
-vector<float> Clut::lookup(float value) {
-	vector<float> out = {0.0,0.0,0.0};
+Color Clut::lookup(float value) {
+	Color C(0,0,0);
 	if (value > 1.0 || value < 0.0) { return out; }
 
 	int lowi = value * (colors.size() - 1);
@@ -42,9 +42,9 @@ vector<float> Clut::lookup(float value) {
 	if (highi >= colors.size()) { highi = colors.size() - 1; }
 
 	double weight = (value * (colors.size() - 1)) - (double)lowi;
-	for (int i = 0; i < out.size(); i++) {
-		out[i] = colors[lowi][i] * (1.0 - weight) + colors[highi][i] * (weight);
-	}
+	C.r = colors[lowi][0] * (1.0 - weight) + colors[highi][0] * (weight);
+	C.g = colors[lowi][1] * (1.0 - weight) + colors[highi][1] * (weight);
+	C.b = colors[lowi][2] * (1.0 - weight) + colors[highi][2] * (weight);
 
-	return out;
+	return C;
 }

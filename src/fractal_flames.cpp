@@ -6,6 +6,8 @@
 #include <string>
 #include <sstream>
 #include <fstream>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define BLOCK_SIZE 1
 
@@ -31,6 +33,40 @@ char* getKernelFromFile(const char* filename, const char* preamble, size_t *sz) 
 	return sourceString;
 }
 
+tuple<vector<Vertex>, vector<Color>> FractalFlames::cpufractal(int _iterations, tuple<int, int, int> _dimensions, vector<float> _weights) {
+	std::vector<Vertex> vVerts;
+	std::vector<Color> vColors;
+
+	Clut clut;
+	Fractal frac;
+	int iterations = _iterations;
+
+	Vertex V;
+	Color C(0,0,0);
+	V.x = 2.0 * drand48() - 1.0;
+	V.y = 2.0 * drand48() - 1.0;
+	V.z = 2.0 * drand48() - 1.0;
+	float weight = drand48();
+
+	for (int i = 0; i < iterations; i++) {
+		int f_index = drand48() * frac.funcNum;
+		weight = (weight + _weights[f_index]) * 0.5;
+		V = frac.select(f_index, V);
+
+		V.x = (V.x + 1.0) * (0.5 * _dimensions[0]);
+		V.y = (V.y + 1.0) * (0.5 * _dimensions[1]);
+		V.z = (V.z + 1.0) * (0.5 * _dimensions[2]);
+
+		C = clut.lookup(weight);
+
+		vVerts.push_back(V);
+		vColors.push_back(C);
+	}
+
+	std::tuple<std::vector<Vertex>, std::vector<Color>> tupOut (vVerts, vColors);
+	return tupOut;
+}
+/*
 tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, tuple<int, int, int> _dimensions, vector<float> _weights) {
 
 	//Set up prelim variables
@@ -193,3 +229,4 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, tup
 	std::tuple<std::vector<Vertex>, std::vector<Color>> tupOut (vVerts, vColors);
 	return tupOut;
 }
+*/

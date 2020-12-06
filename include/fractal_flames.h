@@ -14,4 +14,5 @@ namespace FractalFlames {
 	 * @return Vertex and color of each point in the fractal
 	 */
 	std::tuple<std::vector<Vertex>, std::vector<Color>> fractal(int _iterations, std::tuple<int, int, int> _dimensions, std::vector<float> _weights);
+	std::tuple<std::vector<Vertex>, std::vector<Color>> cpufractal(int _iterations, std::tuple<int, int, int> _dimensions, std::vector<float> _weights);
 }

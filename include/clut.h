@@ -1,9 +1,10 @@
 #include <vector>
+#include "types/color.h"
 
 using namespace std;
 
 struct Clut {
 	void initColors();
 	vector<vector<float>> colors;
-	vector<float> lookup(float value);
+	Color lookup(float value);
 };
