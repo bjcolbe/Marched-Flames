@@ -35,7 +35,7 @@ void Clut::initColors() {
 
 Color Clut::lookup(float value) {
 	Color C(0,0,0);
-	if (value > 1.0 || value < 0.0) { return out; }
+	if (value > 1.0 || value < 0.0) { return C; }
 
 	int lowi = value * (colors.size() - 1);
 	int highi = lowi + 1;

@@ -3,8 +3,7 @@
 #include "fractal.h"
 #include "CL/cl.h"
 #include <iostream>
-#include <string>
-#include <sstream>
+#include <cstring>
 #include <fstream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +14,7 @@ using namespace std;
 
 char* getKernelFromFile(const char* filename, const char* preamble, size_t *sz) {
 	FILE* fptr = NULL;
-	size_t szSource, szPreamble, howmany;
+	size_t szSource, szPreamble;
 	char* sourceString;
 
 	fptr = fopen(filename, "r");
@@ -26,14 +25,13 @@ char* getKernelFromFile(const char* filename, const char* preamble, size_t *sz) 
 	fseek(fptr,0,SEEK_SET);
 
 	sourceString = (char*)calloc(szSource + szPreamble+1, sizeof(char));
-	howmany = fread((sourceString) + szPreamble, szSource, 1, fptr);
 	fclose(fptr);
 	*sz = szSource * szPreamble;
 	sourceString[szSource + szPreamble] = '\0';
 	return sourceString;
 }
 
-tuple<vector<Vertex>, vector<Color>> FractalFlames::cpufractal(int _iterations, tuple<int, int, int> _dimensions, vector<float> _weights) {
+tuple<vector<Vertex>, vector<Color>> FractalFlames::cpufractal(int _iterations, vector<int> _dimensions, vector<float> _weights) {
 	std::vector<Vertex> vVerts;
 	std::vector<Color> vColors;
 
@@ -41,7 +39,7 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::cpufractal(int _iterations, 
 	Fractal frac;
 	int iterations = _iterations;
 
-	Vertex V;
+	Vertex V(0,0,0);
 	Color C(0,0,0);
 	V.x = 2.0 * drand48() - 1.0;
 	V.y = 2.0 * drand48() - 1.0;
@@ -50,6 +48,10 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::cpufractal(int _iterations, 
 
 	for (int i = 0; i < iterations; i++) {
 		int f_index = drand48() * frac.funcNum;
+
+		if (f_index >= frac.funcNum) { f_index = frac.funcNum - 1; }
+		else if (f_index < 0) { f_index = 0; }
+
 		weight = (weight + _weights[f_index]) * 0.5;
 		V = frac.select(f_index, V);
 
@@ -57,7 +59,7 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::cpufractal(int _iterations, 
 		V.y = (V.y + 1.0) * (0.5 * _dimensions[1]);
 		V.z = (V.z + 1.0) * (0.5 * _dimensions[2]);
 
-		C = clut.lookup(weight);
+//		C = clut.lookup(weight);
 
 		vVerts.push_back(V);
 		vColors.push_back(C);
@@ -66,8 +68,8 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::cpufractal(int _iterations, 
 	std::tuple<std::vector<Vertex>, std::vector<Color>> tupOut (vVerts, vColors);
 	return tupOut;
 }
-/*
-tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, tuple<int, int, int> _dimensions, vector<float> _weights) {
+
+tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, vector<int> _dimensions, vector<float> _weights) {
 
 	//Set up prelim variables
 	cl_platform_id platform_id;
@@ -90,26 +92,26 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, tup
 	//Populate input data
 	cl_float *dimensions, *weights;
 	cl_float *vertices, *colors;
-	cl_uint vertTotal = std::get<0>(_dimensions) * std::get<1>(_dimensions) * std::get<2>(_dimensions);
+	cl_uint vertTotal = _dimensions[0] * _dimensions[1] * _dimensions[2];
 	cl_uint iterations = _iterations;
 	Clut inClut;
 	inClut.initColors();
 	Fractal inFrac;
 	#define DATA_SIZE vertTotal * 3
 
-	dimensions = (cl_uint *) malloc(sizeof(cl_uint) * 3);
+	dimensions = (cl_float *) malloc(sizeof(cl_float) * 3);
 	weights = (cl_float *) malloc(sizeof(cl_float) * 4);
 	vertices = (cl_float *) malloc(sizeof(cl_float) * DATA_SIZE);
 	colors = (cl_float *) malloc(sizeof(cl_float) * DATA_SIZE);
 
 	for (int i = 0; i < 3; i++) {
-		dimensions[i] = std::get<i>(_dimensions);
+		dimensions[i] = _dimensions[i];
 		weights[i] = _weights[i];
 	}
 
-	for (int i = 0; i < vertTotal; i += 3) {
+	for (cl_uint i = 0; i < vertTotal; i += 3) {
 		for (int j = 0; j < 3; j++) {
-			vetices[i+j] = 0;
+			vertices[i+j] = 0;
 			colors[i+j] = 0;
 		}
 	}
@@ -177,9 +179,9 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, tup
 	clSetKernelArg(kernel, 6, sizeof(Fractal), &inFrac);
 
 	//Configure local/global data into chunks
-	global[0] = std::get<0>(_dimensions);
-	global[1] = std::get<1>(_dimensions);
-	global[2] = std::get<2>(_dimensions);
+	global[0] = _dimensions[0];
+	global[1] = _dimensions[1];
+	global[2] = _dimensions[2];
 
 	local[0] = BLOCK_SIZE;
 	local[1] = BLOCK_SIZE;
@@ -219,7 +221,7 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, tup
 	//Assign the output into vector/tuple form
 	std::vector<Vertex> vVerts;
 	std::vector<Color> vColors;
-	for (int i = 0; i < vertTotal; i += 3) {
+	for (cl_uint i = 0; i < vertTotal; i += 3) {
 		Vertex vert( vertices[i], vertices[i+1], vertices[i+2] );
 		Color col( colors[i], colors[i+1], colors[i+2] );
 		vVerts.push_back(vert);
@@ -229,4 +231,4 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, tup
 	std::tuple<std::vector<Vertex>, std::vector<Color>> tupOut (vVerts, vColors);
 	return tupOut;
 }
-*/
+
