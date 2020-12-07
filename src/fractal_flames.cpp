@@ -129,13 +129,12 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, int
 	cl_command_queue command_queue;
 	cl_program program;
 	cl_kernel kernel;
-	cl_mem input1, input2, input3, output1, output2;
+	cl_mem input1, input2, output1, output2;
 	size_t global[1], local[1];
 	cl_event prof_event;
 
 	//Populate input data
 	cl_uint *dimensions, *fweights;
-	cl_float *weights;
 	cl_float *vertices, *colors;
 	cl_uint iterations = _iterations;
 	cl_uint threads = _threads;
@@ -143,14 +142,12 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, int
 	#define DATA_SIZE vertTotal * 3
 
 	dimensions = (cl_uint *) malloc(sizeof(cl_uint) * 3);
-	weights = (cl_float *) malloc(sizeof(cl_float) * 4);
 	fweights = (cl_uint *) malloc(sizeof(cl_uint) * 100);
 	vertices = (cl_float *) malloc(sizeof(cl_float) * DATA_SIZE);
 	colors = (cl_float *) malloc(sizeof(cl_float) * DATA_SIZE);
 
 	for (int i = 0; i < 3; i++) {
 		dimensions[i] = _dimensions[i];
-		weights[i] = _weights[i];
 	}
 
 	for (int i = 0; i < 100; i++) {
@@ -215,9 +212,7 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, int
 	//Set up data buffers
 	input1 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_uint) * 3, NULL, &err);
 	validate(err);
-	input2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 3, NULL, &err);
-	validate(err);
-	input3 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_uint) * 100, NULL, &err);
+	input2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_uint) * 100, NULL, &err);
 	validate(err);
 	output1 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * DATA_SIZE, NULL, &err);
 	validate(err);
@@ -226,16 +221,14 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, int
 
 	//Load data into input
 	validate(clEnqueueWriteBuffer(command_queue, input1, CL_TRUE, 0, sizeof(cl_uint) * 3, dimensions, 0, NULL, NULL));
-	validate(clEnqueueWriteBuffer(command_queue, input2, CL_TRUE, 0, sizeof(cl_float) * 3, weights, 0, NULL, NULL));
-	validate(clEnqueueWriteBuffer(command_queue, input3, CL_TRUE, 0, sizeof(cl_uint) * 100, fweights, 0, NULL, NULL));
+	validate(clEnqueueWriteBuffer(command_queue, input2, CL_TRUE, 0, sizeof(cl_uint) * 100, fweights, 0, NULL, NULL));
 
 	//Set arguments for kernel
 	validate(clSetKernelArg(kernel, 0, sizeof(int), &iterations));
 	validate(clSetKernelArg(kernel, 1, sizeof(cl_mem), &input1));
 	validate(clSetKernelArg(kernel, 2, sizeof(cl_mem), &input2));
-	validate(clSetKernelArg(kernel, 3, sizeof(cl_mem), &input3));
-	validate(clSetKernelArg(kernel, 4, sizeof(cl_mem), &output1));
-	validate(clSetKernelArg(kernel, 5, sizeof(cl_mem), &output2));
+	validate(clSetKernelArg(kernel, 3, sizeof(cl_mem), &output1));
+	validate(clSetKernelArg(kernel, 4, sizeof(cl_mem), &output2));
 
 	//Configure local/global data into chunks
 	global[0] = threads;

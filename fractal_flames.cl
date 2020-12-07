@@ -15,17 +15,17 @@ struct color getcolor(struct vertex tempv) {
 	float hue = ( (int)tempv.z * 360 ) % 360;
 	float x = 1 - abs( ((int)(hue/60) % 2) - 1 );
 
-	if (0 <= hue < 60) {
+	if (0 <= hue && hue < 60) {
 		r = 1; g = x; b = 0;
-	} else if (60 <= hue < 120) {
+	} else if (60 <= hue && hue < 120) {
 		r = x; g = 1; b = 0;
-	} else if (120 <= hue < 180) {
+	} else if (120 <= hue && hue < 180) {
 		r = 0; g = 1; b = x;
-	} else if (180 <= hue < 240) {
+	} else if (180 <= hue && hue < 240) {
 		r = 0; g = x; b = 1;
-	} else if (240 <= hue < 300) {
+	} else if (240 <= hue && hue < 300) {
 		r = x; g = 0; b = 1;
-	} else if (300 <= hue < 360) {
+	} else if (300 <= hue && hue < 360) {
 		r = 1; g = 0; b = x;
 	}
 	
@@ -34,35 +34,32 @@ struct color getcolor(struct vertex tempv) {
 }
 
 float rand(ulong *seed) {
-	seed = ( *seed * 0x5DEEDE66DL + 0xBL) & ((1L << 48) - 1);
-	return abs( sin( (float)((int)seed % 360) ) ); 
+	*seed = ( *seed * 0x5DEEDE66DL + 0xBL) & ((1L << 48) - 1);
+	int temp = (int)(*seed >> (48-32));
+	return 0.5 + 0.5*sin((float)(temp % 360)); 
 }
 
 __kernel void fflame(
     const int iterations,
-    const __global float *dimensions,
-    const __global float *weights,
+    const __global uint *dimensions,
     const __global uint *fweights,
     __global float *vertices,
     __global float *colors
 ) {
 
-	ulong seed = (ulong)get_global_id(0);
-	int minmem = (get_global_id(0) - 1) * iterations * 3;
+	ulong seed = get_global_id(0);
+	int minmem = (get_global_id(0)-1) * iterations * 3;
 	if (minmem < 0) { minmem = 0; }
 
 	struct vertex tempv;
 	struct color tempc;
-	tempv.x = 2.0 * rand(&seed) - 1.0;
-	tempv.y = 2.0 * rand(&seed) - 1.0;
-	tempv.z = 2.0 * rand(&seed) - 1.0;
-	float weight = rand(&seed);
+	tempv.x = rand(&seed) * (dimensions[0]/100.0);
+	tempv.y = rand(&seed) * (dimensions[1]/100.0);
+	tempv.z = rand(&seed) * (dimensions[2]/100.0);
 
 	int ii = 0;
 	for (int i = 0; i < iterations; i++) {
 		int f_index = fweights[(int)(rand(&seed) * 100)];
-
-		weight = (weight + weights[f_index]) * 0.5;
 
 		//Here's where things start to get messy
 		// Start of function declarations
