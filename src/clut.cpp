@@ -1,4 +1,5 @@
 #include "clut.h"
+#include <iostream>
 
 void Clut::initColors() {
 	vector<float> color(3,0);
@@ -38,10 +39,11 @@ Color Clut::lookup(float value) {
 	if (value > 1.0 || value < 0.0) { return C; }
 
 	int lowi = value * (colors.size() - 1);
-	int highi = lowi + 1;
-	if (highi >= colors.size()) { highi = colors.size() - 1; }
+	size_t highi = lowi + 1;
 
+	if (highi >= colors.size()) { highi = colors.size() - 1; }
 	double weight = (value * (colors.size() - 1)) - (double)lowi;
+
 	C.r = colors[lowi][0] * (1.0 - weight) + colors[highi][0] * (weight);
 	C.g = colors[lowi][1] * (1.0 - weight) + colors[highi][1] * (weight);
 	C.b = colors[lowi][2] * (1.0 - weight) + colors[highi][2] * (weight);

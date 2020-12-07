@@ -2,16 +2,13 @@
 #include "clut.h"
 #include "fractal.h"
 #include "CL/cl.h"
+#include "utils/validator.h"
 #include <iostream>
-#include <cstring>
+#include <sstream>
 #include <fstream>
-#include <stdio.h>
-#include <stdlib.h>
-
-#define BLOCK_SIZE 1
 
 using namespace std;
-
+/*
 char* getKernelFromFile(const char* filename, const char* preamble, size_t *sz) {
 	FILE* fptr = NULL;
 	size_t szSource, szPreamble;
@@ -30,27 +27,51 @@ char* getKernelFromFile(const char* filename, const char* preamble, size_t *sz) 
 	sourceString[szSource + szPreamble] = '\0';
 	return sourceString;
 }
-
+*/
 tuple<vector<Vertex>, vector<Color>> FractalFlames::cpufractal(int _iterations, vector<int> _dimensions, vector<float> _weights) {
 	std::vector<Vertex> vVerts;
 	std::vector<Color> vColors;
 
 	Clut clut;
+	clut.initColors();
 	Fractal frac;
+
+	float wsum = _weights[0]+_weights[1]+_weights[2]+_weights[3];
+	int w1 = (_weights[0]/wsum) * 100 + 0.5;
+	int w2 = (_weights[1]/wsum) * 100 + 0.5;
+	int w3 = (_weights[2]/wsum) * 100 + 0.5;
+	int w4 = (_weights[3]/wsum) * 100 + 0.5;
+
+	int counts[4] = {0,0,0,0};
+	vector<int> randoms(100,0);
+	for (int i = 0; i < 100; i++) {
+		if (counts[0] < w1) {
+			randoms[i] = 0;
+			counts[0]++;
+		} else if (counts[1] < w2) {
+			randoms[i] = 1;
+			counts[1]++;
+		} else if (counts[2] < w3) {
+			randoms[i] = 2;
+			counts[2]++;
+		} else if (counts[3] < w4) {
+			randoms[i] = 3;
+			counts[3]++;
+		}
+	}
+
 	int iterations = _iterations;
 
 	Vertex V(0,0,0);
-	Color C(1,1,1);
+	Color C(0,0,0);
+
 	V.x = 2.0 * drand48() - 1.0;
 	V.y = 2.0 * drand48() - 1.0;
 	V.z = 2.0 * drand48() - 1.0;
 	float weight = drand48();
 
 	for (int i = 0; i < iterations; i++) {
-		int f_index = drand48() * frac.funcNum;
-
-		if (f_index >= frac.funcNum) { f_index = frac.funcNum - 1; }
-		else if (f_index < 0) { f_index = 0; }
+		int f_index = randoms[drand48() * 100];
 
 		weight = (weight + _weights[f_index]) * 0.5;
 		V = frac.select(f_index, V);
@@ -59,7 +80,7 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::cpufractal(int _iterations, 
 		V.y = (V.y + 1.0) * (0.5 * _dimensions[1]);
 		V.z = (V.z + 1.0) * (0.5 * _dimensions[2]);
 
-//		C = clut.lookup(weight);
+		C = clut.lookup(weight);
 
 		vVerts.push_back(V);
 		vColors.push_back(C);
@@ -69,7 +90,32 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::cpufractal(int _iterations, 
 	return tupOut;
 }
 
-tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, vector<int> _dimensions, vector<float> _weights) {
+tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, int _threads, vector<int> _dimensions, vector<float> _weights) {
+
+	//Set up a set of numbers to weight the functions
+	vector<int> randoms(100,0);
+	float wsum = _weights[0]+_weights[1]+_weights[2]+_weights[3];
+	int w1 = (_weights[0]/wsum) * 100 + 0.5;
+	int w2 = (_weights[1]/wsum) * 100 + 0.5;
+	int w3 = (_weights[2]/wsum) * 100 + 0.5;
+	int w4 = (_weights[3]/wsum) * 100 + 0.5;
+
+	int counts[4] = {0,0,0,0};
+	for (int i = 0; i < 100; i++) {
+		if (counts[0] < w1) {
+			randoms[i] = 0;
+			counts[0]++;
+		} else if (counts[1] < w2) {
+			randoms[i] = 1;
+			counts[1]++;
+		} else if (counts[2] < w3) {
+			randoms[i] = 2;
+			counts[2]++;
+		} else if (counts[3] < w4) {
+			randoms[i] = 3;
+			counts[3]++;
+		}
+	}
 
 	//Set up prelim variables
 	cl_platform_id platform_id;
@@ -82,31 +128,32 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, vec
 	cl_command_queue command_queue;
 	cl_program program;
 	cl_kernel kernel;
-	cl_mem input1, input2, output1, output2;
-	size_t global[3], local[3];
+	cl_mem input1, input2, input3, output1, output2;
+	size_t global[1], local[1];
 	cl_event prof_event;
 
-	char *kernelSource;
-	size_t kernelSize;
-
 	//Populate input data
-	cl_float *dimensions, *weights;
+	cl_uint *dimensions, *fweights;
+	cl_float *weights;
 	cl_float *vertices, *colors;
-	cl_uint vertTotal = _dimensions[0] * _dimensions[1] * _dimensions[2];
 	cl_uint iterations = _iterations;
-	Clut inClut;
-	inClut.initColors();
-	Fractal inFrac;
+	cl_uint threads = _threads;
+	cl_uint vertTotal = threads * iterations;
 	#define DATA_SIZE vertTotal * 3
 
-	dimensions = (cl_float *) malloc(sizeof(cl_float) * 3);
+	dimensions = (cl_uint *) malloc(sizeof(cl_uint) * 3);
 	weights = (cl_float *) malloc(sizeof(cl_float) * 4);
+	fweights = (cl_uint *) malloc(sizeof(cl_uint) * 100);
 	vertices = (cl_float *) malloc(sizeof(cl_float) * DATA_SIZE);
 	colors = (cl_float *) malloc(sizeof(cl_float) * DATA_SIZE);
 
 	for (int i = 0; i < 3; i++) {
 		dimensions[i] = _dimensions[i];
 		weights[i] = _weights[i];
+	}
+
+	for (int i = 0; i < 100; i++) {
+		fweights[i] = randoms[i];
 	}
 
 	for (cl_uint i = 0; i < vertTotal; i += 3) {
@@ -134,9 +181,13 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, vec
 	context = clCreateContext(properties, 1, &device_id, NULL, NULL, &err);
 	command_queue = clCreateCommandQueue(context, device_id, CL_QUEUE_PROFILING_ENABLE, &err);
 
-	kernelSource = getKernelFromFile("fractal_flame.cl","",&kernelSize); //Load kernel
+	stringstream ss;
+	ss << ifstream("fractal_flames.cl").rdbuf();
+	auto sourcestr = ss.str();
+	auto source = sourcestr.c_str();
 
-	program = clCreateProgramWithSource(context, 1, (const char **) &kernelSource, NULL, &err);
+	program = clCreateProgramWithSource(context, 1, (const char **) &source, NULL, &err);
+	validate(err);
 
 	//Compile the program
 	if (clBuildProgram(program, 0, NULL, NULL, NULL, NULL) != CL_SUCCESS) {
@@ -157,38 +208,49 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, vec
 		exit(1);
 	}
 
-	kernel = clCreateKernel(program, "flame", &err);
+	kernel = clCreateKernel(program, "fflame", &err);
+	validate(err);
 
 	//Set up data buffers
-	input1 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_uint) * 3, NULL, NULL);
-	input2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 3, NULL, NULL);
-	output1 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * DATA_SIZE, NULL, NULL);
-	output2 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * DATA_SIZE, NULL, NULL);
+	input1 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_uint) * 3, NULL, &err);
+	validate(err);
+	input2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 3, NULL, &err);
+	validate(err);
+	input3 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_uint) * 100, NULL, &err);
+	validate(err);
+	output1 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * DATA_SIZE, NULL, &err);
+	validate(err);
+	output2 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float) * DATA_SIZE, NULL, &err);
+	validate(err);
 
 	//Load data into input
-	clEnqueueWriteBuffer(command_queue, input1, CL_TRUE, 0, sizeof(cl_uint) * 3, dimensions, 0, NULL, NULL);
-	clEnqueueWriteBuffer(command_queue, input2, CL_TRUE, 0, sizeof(cl_float) * 3, weights, 0, NULL, NULL);
+	validate(clEnqueueWriteBuffer(command_queue, input1, CL_TRUE, 0, sizeof(cl_uint) * 3, dimensions, 0, NULL, NULL));
+	validate(clEnqueueWriteBuffer(command_queue, input2, CL_TRUE, 0, sizeof(cl_float) * 3, weights, 0, NULL, NULL));
+	validate(clEnqueueWriteBuffer(command_queue, input3, CL_TRUE, 0, sizeof(cl_uint) * 100, fweights, 0, NULL, NULL));
 
 	//Set arguments for kernel
-	clSetKernelArg(kernel, 0, sizeof(int), &iterations);
-	clSetKernelArg(kernel, 1, sizeof(cl_mem), &input1);
-	clSetKernelArg(kernel, 2, sizeof(cl_mem), &input2);
-	clSetKernelArg(kernel, 3, sizeof(cl_mem), &output1);
-	clSetKernelArg(kernel, 4, sizeof(cl_mem), &output2);
-	clSetKernelArg(kernel, 5, sizeof(Clut), &inClut);
-	clSetKernelArg(kernel, 6, sizeof(Fractal), &inFrac);
+	validate(clSetKernelArg(kernel, 0, sizeof(int), &iterations));
+	validate(clSetKernelArg(kernel, 1, sizeof(cl_mem), &input1));
+	validate(clSetKernelArg(kernel, 2, sizeof(cl_mem), &input2));
+	validate(clSetKernelArg(kernel, 3, sizeof(cl_mem), &input3));
+	validate(clSetKernelArg(kernel, 4, sizeof(cl_mem), &output1));
+	validate(clSetKernelArg(kernel, 5, sizeof(cl_mem), &output2));
 
 	//Configure local/global data into chunks
-	global[0] = _dimensions[0];
-	global[1] = _dimensions[1];
-	global[2] = _dimensions[2];
+	global[0] = threads;
 
-	local[0] = BLOCK_SIZE;
-	local[1] = BLOCK_SIZE;
-	local[2] = BLOCK_SIZE;
+	int local_num = threads / 10;
+	if (local_num > 100) {
+		local_num = 100;
+	} else if (local_num < 1) {
+		local_num = 1;
+	}
+
+	local[0] = local_num;
 
 	//Queue up the kernel
 	err = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, global, local, 0, NULL, &prof_event);
+	validate(err);
 	clFinish(command_queue);
 
 	//Profiling Timing
@@ -212,7 +274,7 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, vec
 	clReleaseContext(context);
 	clReleaseCommandQueue(command_queue);
 	clReleaseProgram(program);
-	clReleaseKernel(kernel);
+	validate(clReleaseKernel(kernel));
 	clReleaseMemObject(input1);
 	clReleaseMemObject(input2);
 	clReleaseMemObject(output1);
@@ -221,7 +283,7 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::fractal(int _iterations, vec
 	//Assign the output into vector/tuple form
 	std::vector<Vertex> vVerts;
 	std::vector<Color> vColors;
-	for (cl_uint i = 0; i < vertTotal; i += 3) {
+	for (cl_uint i = 0; i < DATA_SIZE; i += 3) {
 		Vertex vert( vertices[i], vertices[i+1], vertices[i+2] );
 		Color col( colors[i], colors[i+1], colors[i+2] );
 		vVerts.push_back(vert);
