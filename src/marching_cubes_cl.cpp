@@ -44,7 +44,10 @@ void MarchingCubes::marchCL(float resolution, Model &model) {
 	kernel.addArg(outVertices.data);
 	kernel.addArg(outColors.data);
 	kernel.addArg(cubeIndex);
-	
+
+	int count = 0;
+	float totalMarchTime = 0;
+
 	space.forEach([&](Cell cell) {
 		cubeIndex = 0;
 
@@ -74,7 +77,9 @@ void MarchingCubes::marchCL(float resolution, Model &model) {
 		kernel.removeArg();
 		kernel.addArg(cubeIndex);
 
-		kernel.run(1, new size_t[1]{12}, new size_t[1]{1});
+		auto millis = kernel.run(1, new size_t[1]{12}, new size_t[1]{1});
+		totalMarchTime += millis;
+		count++;
 
 		outVertices.read();
 		outColors.read();
@@ -105,4 +110,8 @@ void MarchingCubes::marchCL(float resolution, Model &model) {
 			});
 		}
 	});
+
+	printf("Time\n");
+	printf("\tAverage Cell: %fs\n", totalMarchTime / count / 1000);
+	printf("\tTotal March: %fs\n", totalMarchTime / 1000);
 }
