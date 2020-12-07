@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 
 	MarchingCubes::marchCL(res, model);
 
-	printf("March\n\tVertices: %zu\n\tVertices: %zu\n", model.faces.size(), model.vertices.size());
+	printf("March\n\tVertices: %zu\n\tFaces: %zu\n", model.vertices.size(), model.faces.size());
 
 	model.write(path);
 }

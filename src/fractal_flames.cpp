@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include "utils/rand.h"
 
 using namespace std;
 /*
@@ -65,13 +66,13 @@ tuple<vector<Vertex>, vector<Color>> FractalFlames::cpufractal(int _iterations, 
 	Vertex V(0,0,0);
 	Color C(0,0,0);
 
-	V.x = 2.0 * drand48() - 1.0;
-	V.y = 2.0 * drand48() - 1.0;
-	V.z = 2.0 * drand48() - 1.0;
-	float weight = drand48();
+	V.x = 2.0 * Rand::range() - 1.0;
+	V.y = 2.0 * Rand::range() - 1.0;
+	V.z = 2.0 * Rand::range() - 1.0;
+	float weight = Rand::range();
 
 	for (int i = 0; i < iterations; i++) {
-		int f_index = randoms[drand48() * 100];
+		int f_index = randoms[Rand::range() * 100];
 
 		weight = (weight + _weights[f_index]) * 0.5;
 		V = frac.select(f_index, V);
