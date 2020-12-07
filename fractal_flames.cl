@@ -34,16 +34,9 @@ struct color getcolor(struct vertex tempv) {
 }
 
 float rand(ulong *seed) {
-<<<<<<< HEAD
 	*seed = ( *seed * 0x5DEEDE66DL + 0xBL) & ((1L << 48) - 1);
 	int temp = (int)(*seed >> (48-32));
 	return 0.5 + 0.5*sin((float)(temp % 360)); 
-=======
-	*seed = (*seed * 0x5DEEDE66DL + 0xBL) & ((1L << 48) - 1);
-	int value = (int)((*seed >> (48 - 32)));
-
-	return 0.5 + 0.5 * sin((float)(value % 360));
->>>>>>> a076a894a9ee203302a049bfe88cc131744dd743
 }
 
 __kernel void fflame(

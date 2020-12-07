@@ -31,7 +31,7 @@ void Model::write(string path, string format) {
 		mesh << "#Faces" << endl;
 		for(auto i = 0u; i < faces.size(); i++) {
 			auto face = faces[i];
-//			mesh << "usemtl mat" << i << endl;
+			mesh << "usemtl mat" << i << endl;
 			mesh << "f " << get<0>(face) << " " << get<1>(face) << " " << get<2>(face) << endl;
 		}
 
