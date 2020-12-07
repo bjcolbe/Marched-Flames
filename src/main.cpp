@@ -70,9 +70,15 @@ int main(int argc, char **argv) {
 	}
 
 	if(function == "fractal") {
-		auto points = FractalFlames::fractal(iterations, threads, dimensions, weights);
-		model.vertices = get<0>(points);
-		model.colors = get<1>(points);
+		if(device == "opencl") {
+			auto points = FractalFlames::fractal(iterations, threads, dimensions, weights);
+			model.vertices = get<0>(points);
+			model.colors = get<1>(points);
+		} else if(device == "cpu") {
+			auto points = FractalFlames::cpufractal(iterations, dimensions, weights);
+			model.vertices = get<0>(points);
+			model.colors = get<1>(points);
+		}
 	} else if(function == "sincos")
 		model = Graph::create(res, dimensions[0], dimensions[1], dimensions[2], [](float x, float z) { return 2 + sin(x) + cos(z); });
 	else if(function == "sin")
