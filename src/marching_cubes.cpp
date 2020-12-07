@@ -60,8 +60,8 @@ vector<Triangle> polygonize(Cell cell) {
 	return triangles;
 }
 
-void MarchingCubes::march(float resolution, Model &model) {
-	Space space(resolution, model);
+void MarchingCubes::march(float resolution, Model &model, vector<int> sdim) {
+	Space space(resolution, model, sdim[0], sdim[1], sdim[2]);
 
 	model.vertices.clear();
 	model.colors.clear();
@@ -94,7 +94,7 @@ void MarchingCubes::march(float resolution, Model &model) {
 			});
 	});
 
-	printf("Time\n");
+	printf("March Time\n");
 	printf("\tAverage Cell: %fs\n", totalMarchTime / count / 1000);
 	printf("\tTotal March: %fs\n", totalMarchTime / 1000);
 }

@@ -8,6 +8,7 @@
 #include <cmath>
 #include <limits>
 #include <iostream>
+#include <chrono>
 
 using namespace std;
 using Space = MarchingCubes::Space;
@@ -52,7 +53,7 @@ MarchingCubes::Initializer::Initializer() {
 			TriangleTable1D[TableSize * j + i] = TriangleTable[i][j];
 }
 
-MarchingCubes::Space::Space(float resolution, Model &model) {
+MarchingCubes::Space::Space(float resolution, Model &model, int dimX, int dimY, int dimZ) {
 	if(model.vertices.size() != model.colors.size()) {
 		cerr << "Model vertices " << model.colors.size() << " are not the same amount as vertex colors " << model.colors.size() << endl;
 		return;
@@ -60,6 +61,8 @@ MarchingCubes::Space::Space(float resolution, Model &model) {
 
 	if(model.vertices.size() == 0)
 		return;
+
+	auto start = chrono::high_resolution_clock::now();
 
 	constexpr auto inf = numeric_limits<float>::infinity();
 	minX = minY = minZ = inf;
@@ -82,39 +85,52 @@ MarchingCubes::Space::Space(float resolution, Model &model) {
 			maxZ = v.z;
 	}
 
-	averageDistance = 0.0f;
+	if(dimX > 0 && dimY > 0 && dimZ > 0) {
+		width = dimX;
+		height = dimY;
+		length = dimZ;
+	} else {
+		averageDistance = 0.0f;
 
-	for(auto i = (int)model.vertices.size() - 1; i > 0; i--) {
-		auto localAverage = 0.0f;
+		for(auto i = (int)model.vertices.size() - 1; i > 0; i--) {
+			auto localAverage = 0.0f;
 
-		for(auto j = i - 1; j >= 0; j--) {
-			auto v1 = model.vertices[i];
-			auto v2 = model.vertices[j];
-			// printf("\t|<%.1f, %.1f, %.1f> - <%.1f, %.1f, %.1f>| = %f\n", v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, (v1 - v2).magnitude());
+			for(auto j = i - 1; j >= 0; j--) {
+				auto v1 = model.vertices[i];
+				auto v2 = model.vertices[j];
+				// printf("\t|<%.1f, %.1f, %.1f> - <%.1f, %.1f, %.1f>| = %f\n", v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, (v1 - v2).magnitude());
 
-			localAverage += (v1 - v2).magnitude();
+				localAverage += (v1 - v2).magnitude();
+			}
+
+			averageDistance += localAverage / i;
 		}
 
-		averageDistance += localAverage / i;
+		averageDistance /= model.vertices.size();
+
+		if(averageDistance == 0) {
+			cerr << "Average distance between points is zero" << endl;
+			return;
+		}
+
+		auto step = resolution / averageDistance;
+		width = (int)ceil((maxX - minX) * step);
+		height = (int)ceil((maxY - minY) * step);
+		length = (int)ceil((maxZ - minZ) * step);
 	}
 
-	averageDistance /= model.vertices.size();
-
-	if(averageDistance == 0) {
-		cerr << "Average distance between points is zero" << endl;
-		return;
-	}
-
-	auto step = resolution / averageDistance;
-	width = (int)ceil((maxX - minX) * step);
-	height = (int)ceil((maxY - minY) * step);
-	length = (int)ceil((maxZ - minZ) * step);
+	auto end = chrono::high_resolution_clock::now();
+	auto delta = chrono::duration<float, std::milli>(end - start).count();
 
 	printf("Space\n");
 	printf("\tBounds: (%.2f, %.2f) (%.2f, %.2f) (%.2f, %.2f)\n", minX, maxX, minY, maxY, minZ, maxZ);
 	printf("\tSize: %f, %f, %f\n", maxX - minX, maxY - minY, maxZ - minZ);
-	printf("\tAverage Distance: %f\n", averageDistance);
+
+	if(averageDistance > 0)
+		printf("\tAverage Distance: %f\n", averageDistance);
+
 	printf("\tDimensions: %i, %i, %i\n", width, height, length);
+	printf("\tCalculate Time: %fs\n", delta / 1000);
 
 	for(auto j = 0; j < height; j++)
 	for(auto k = 0; k < length; k++)

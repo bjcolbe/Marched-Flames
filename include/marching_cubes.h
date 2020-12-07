@@ -26,13 +26,13 @@ struct MarchingCubes {
 	 * Uses marching cubes to find the faces of a point cloud
 	 * @param model An incomplete model consisting of vertices and their colors (point cloud)
 	 */
-	static void march(float resolution, Model &model);
+	static void march(float resolution, Model &model, std::vector<int> sdim = {-1, -1, -1});
 
 	/**
 	 * Uses parallel marching cubes via OpenCL to find the faces of a point cloud
 	 * @param model An incomplete model consisting of vertices and their colors (point cloud)
 	 */
-	static void marchCL(float resolution, Model &model);
+	static void marchCL(float resolution, Model &model, std::vector<int> sdim = {-1, -1, -1});
 
 	struct Space {
 		int width, height, length;
@@ -41,7 +41,7 @@ struct MarchingCubes {
 		float averageDistance;
 		std::vector<Vertex> vertices;
 		std::vector<Color> colors;
-		Space(float, Model&);
+		Space(float, Model&, int dimX = -1, int dimY = -1, int dimZ = -1);
 		Point at(int, int, int);
 		void forEach(std::function<void(Cell)> action);
 		static bool isActive(Point);
