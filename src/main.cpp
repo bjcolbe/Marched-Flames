@@ -18,6 +18,7 @@ int main(int argc, char **argv) {
 	int iterations = 1000;
 	int res = 20;
 	int threads = 10;
+	string device = "opencl";
 	string function = "fractal";
 
 	Model model;
@@ -49,7 +50,8 @@ int main(int argc, char **argv) {
 				sdim[0] = stoi(string(argv[i+1]));
 				sdim[1] = stoi(string(argv[i+2]));
 				sdim[2] = stoi(string(argv[i+3]));
-			} 
+			} else if(arg == "-device")
+				device = string(argv[i + 1]);
 		}
 
 	} catch (std::exception &e) {
@@ -80,7 +82,10 @@ int main(int argc, char **argv) {
 
 	printf("Initial\n\tVertices: %zu\n\tColors: %zu\n", model.vertices.size(), model.colors.size());
 
-	MarchingCubes::marchCL(res, model, sdim);
+	if(device == "opencl")
+		MarchingCubes::marchCL(res, model, sdim);
+	else if(device == "cpu")
+		MarchingCubes::march(res, model, sdim);
 
 	printf("March\n\tVertices: %zu\n\tFaces: %zu\n", model.vertices.size(), model.faces.size());
 
